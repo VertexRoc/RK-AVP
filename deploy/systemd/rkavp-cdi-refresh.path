@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch Rockchip device nodes for CDI refresh
+
+[Path]
+PathChanged=/dev
+PathChanged=/sys/class/video4linux
+PathChanged=/sys/class/drm
+Unit=rkavp-cdi-refresh.service
+
+[Install]
+WantedBy=multi-user.target

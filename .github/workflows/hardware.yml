@@ -1,0 +1,29 @@
+name: Rockchip Hardware
+
+on:
+  workflow_dispatch:
+
+jobs:
+  board:
+    strategy:
+      matrix:
+        soc: [rk3588, rk3576]
+    runs-on: [self-hosted, linux, arm64, "${{ matrix.soc }}"]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libasound2-dev libssl-dev
+      - name: Configure hardware build
+        run: cmake -S . -B build/hardware -DCMAKE_BUILD_TYPE=Release -DRKAVP_TARGET_SOC=${{ matrix.soc }} -DRKAVP_ENABLE_ROCKCHIP=ON -DRKAVP_ENABLE_AUDIO=ON -DRKAVP_ENABLE_STREAMING=ON -DRKAVP_BUILD_TESTS=ON -DRKAVP_BUILD_HARDWARE_TESTS=ON
+      - name: Build
+        run: cmake --build build/hardware --parallel
+      - name: Hardware tests
+        env:
+          RKAVP_TEST_CAMERA_0: ${{ vars.RKAVP_TEST_CAMERA_0 || '/dev/video0' }}
+          RKAVP_TEST_CAMERA_1: ${{ vars.RKAVP_TEST_CAMERA_1 || '/dev/video1' }}
+        run: ctest --test-dir build/hardware -L hardware --output-on-failure
+      - name: Framework endurance tests
+        env:
+          RKAVP_ENDURANCE_SECONDS: "1800"
+        run: ctest --test-dir build/hardware -L performance --output-on-failure

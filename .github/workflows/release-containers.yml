@@ -1,0 +1,76 @@
+name: Release Containers
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  runtime:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        soc: [rk3588, rk3576]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish framework runtime
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime-${{ matrix.soc }}
+          platforms: linux/arm64
+          build-args: RKAVP_SOC=${{ matrix.soc }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+          provenance: mode=max
+          sbom: true
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/rk-avp:${{ matrix.soc }}
+            ghcr.io/${{ github.repository_owner }}/rk-avp:${{ github.ref_name }}-${{ matrix.soc }}
+          cache-from: type=gha,scope=${{ matrix.soc }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.soc }}
+      - name: Build and publish development image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: devel-${{ matrix.soc }}
+          platforms: linux/arm64
+          build-args: |
+            RKAVP_SOC=${{ matrix.soc }}
+            RKAVP_VERSION=${{ github.ref_name }}
+            VCS_REF=${{ github.sha }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rk-avp:devel-${{ matrix.soc }}
+          provenance: mode=max
+          sbom: true
+
+  sdk:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: sdk-arm64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rk-avp:sdk-arm64

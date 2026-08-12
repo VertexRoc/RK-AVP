@@ -1,0 +1,10 @@
+/build/
+/3rdparty/.cache/
+/3rdparty/src/
+/3rdparty/*-src/
+/3rdparty/*-build/
+/.cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+compile_commands.json

@@ -1,0 +1,14 @@
+version: 1
+graph:
+  name: passthrough
+  nodes:
+    - id: input
+      type: Passthrough
+    - id: sink
+      type: NullSink
+  edges:
+    - from: input.out
+      to: sink.in
+      queue:
+        capacity: 2
+        policy: drop_oldest

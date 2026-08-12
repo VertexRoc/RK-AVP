@@ -1,0 +1,44 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "host-debug",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/host-debug-make",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "RKAVP_FETCH_DEPS": "OFF",
+        "RKAVP_BUILD_TESTS": "ON",
+        "RKAVP_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "rk3588-release",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/rk3588-release",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/aarch64-linux-gnu.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "RKAVP_TARGET_SOC": "rk3588",
+        "RKAVP_ENABLE_ROCKCHIP": "ON",
+        "RKAVP_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "rk3576-release",
+      "inherits": "rk3588-release",
+      "binaryDir": "${sourceDir}/build/rk3576-release",
+      "cacheVariables": {
+        "RKAVP_TARGET_SOC": "rk3576"
+      }
+    }
+  ],
+  "buildPresets": [
+    {"name": "host-debug", "configurePreset": "host-debug"},
+    {"name": "rk3588-release", "configurePreset": "rk3588-release"},
+    {"name": "rk3576-release", "configurePreset": "rk3576-release"}
+  ],
+  "testPresets": [
+    {"name": "host-debug", "configurePreset": "host-debug", "output": {"outputOnFailure": true}}
+  ]
+}

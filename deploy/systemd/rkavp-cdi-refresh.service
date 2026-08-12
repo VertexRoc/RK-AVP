@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh RK-AVP Rockchip CDI specifications
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/install -d -m 0755 /var/run/cdi
+ExecStart=/usr/bin/rkavp-ctk cdi generate --output /var/run/cdi
+
+[Install]
+WantedBy=multi-user.target

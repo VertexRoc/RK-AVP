@@ -1,0 +1,8 @@
+.git
+.github
+build
+3rdparty/.cache
+3rdparty/src
+models
+__pycache__
+.pytest_cache

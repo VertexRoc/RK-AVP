@@ -1,0 +1,26 @@
+version: 1
+graph:
+  name: alsa-capture
+  executors:
+    - name: audio
+      threads: 2
+      queue_capacity: 64
+  nodes:
+    - id: microphone
+      type: AlsaCapture
+      executor: audio
+      options:
+        device: "${ALSA_DEVICE:-default}"
+        sample_rate: 16000
+        channels: 1
+        format: s16_le
+        frame_ms: 10
+    - id: sink
+      type: NullSink
+      executor: audio
+  edges:
+    - from: microphone.audio
+      to: sink.in
+      queue:
+        capacity: 32
+        policy: block

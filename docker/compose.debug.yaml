@@ -1,0 +1,8 @@
+services:
+  rkavp:
+    privileged: true
+    read_only: false
+    cap_drop: []
+    security_opt: []
+    volumes:
+      - /dev:/dev

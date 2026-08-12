@@ -1,0 +1,26 @@
+services:
+  rkavp:
+    image: ${RKAVP_IMAGE:-ghcr.io/local/rk-avp:rk3588}
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /run:rw,nosuid,size=16m
+    environment:
+      RKAVP_SOC: ${RKAVP_SOC:-rk3588}
+      RKNN_LOG_LEVEL: "0"
+      RKAVP_PLUGIN_PATH: /opt/rkavp/lib
+    command: ["doctor"]
+    volumes:
+      - type: bind
+        source: ${RKAVP_GRAPH_DIR:-../graphs}
+        target: /work/graphs
+        read_only: true
+      - type: bind
+        source: /proc/device-tree/compatible
+        target: /proc/device-tree/compatible
+        read_only: true

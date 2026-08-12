@@ -1,0 +1,10 @@
+version: 1
+graph:
+  name: hello-graph
+  inputs:
+    input: echo.in
+  outputs:
+    output: echo.out
+  nodes:
+    - id: echo
+      type: Passthrough

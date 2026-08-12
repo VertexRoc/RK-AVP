@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+compose_file="${repo_root}/docker/compose.yaml"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  docker/rkavp-docker build [rk3588|rk3576] [image]
+  docker/rkavp-docker run [rk3588|rk3576] [--cdi|--debug] [rkavp-run arguments...]
+  docker/rkavp-docker validate
+
+Examples:
+  docker/rkavp-docker build rk3588 rkavp:rk3588
+  RKAVP_IMAGE=rkavp:rk3588 docker/rkavp-docker run rk3588 doctor
+  RKAVP_GRAPH_DIR=/opt/my-app/graphs docker/rkavp-docker run rk3588 \
+    run --graph /work/graphs/graph.yaml
+EOF
+}
+
+validate_soc() {
+  case "$1" in
+    rk3588|rk3576) ;;
+    *) echo "unsupported SoC: $1" >&2; exit 2 ;;
+  esac
+}
+
+detect_soc() {
+  if [[ -r /proc/device-tree/compatible ]]; then
+    if tr '\0' '\n' </proc/device-tree/compatible | grep -q 'rk3576'; then
+      echo rk3576
+      return
+    fi
+    if tr '\0' '\n' </proc/device-tree/compatible | grep -q 'rk3588'; then
+      echo rk3588
+      return
+    fi
+  fi
+  echo rk3588
+}
+
+has_rkavp_cdi() {
+  local spec
+  for spec in /var/run/cdi/*.yaml /var/run/cdi/*.json /etc/cdi/*.yaml /etc/cdi/*.json; do
+    [[ -r "${spec}" ]] || continue
+    grep -q 'rockchip.com/' "${spec}" && return 0
+  done
+  return 1
+}
+
+generate_device_override() {
+  local output="$1"
+  local path
+  local -a devices=()
+  declare -A seen=()
+
+  add_device() {
+    local device="$1"
+    [[ -e "${device}" ]] || return 0
+    [[ -n "${seen[${device}]:-}" ]] && return 0
+    seen["${device}"]=1
+    devices+=("${device}")
+  }
+
+  for path in /dev/video* /dev/media* /dev/v4l-subdev* /dev/camera*; do
+    add_device "${path}"
+  done
+  for path in /dev/rga /dev/rknpu /dev/mpp_service /dev/iep /dev/ion \
+              /dev/dri/card* /dev/dri/renderD* /dev/dma_heap/* /dev/snd/*; do
+    add_device "${path}"
+  done
+
+  {
+    echo "services:"
+    echo "  rkavp:"
+    if ((${#devices[@]} != 0)); then
+      echo "    devices:"
+      for path in "${devices[@]}"; do
+        echo "      - ${path}:${path}"
+      done
+    fi
+    if [[ -d /dev/v4l ]]; then
+      echo "    volumes:"
+      echo "      - /dev/v4l:/dev/v4l:ro"
+    fi
+  } >"${output}"
+}
+
+build_image() {
+  local soc="${1:-$(detect_soc)}"
+  local image="${2:-rkavp:${soc}}"
+  validate_soc "${soc}"
+  docker buildx build \
+    --platform linux/arm64 \
+    --target "runtime-${soc}" \
+    --build-arg "RKAVP_SOC=${soc}" \
+    --tag "${image}" \
+    --load \
+    --file "${repo_root}/Dockerfile" \
+    "${repo_root}"
+}
+
+run_image() {
+  local soc="$(detect_soc)"
+  local mode=auto
+  local override=""
+  local -a compose_args=(-f "${compose_file}")
+
+  if (($# != 0)) && [[ "$1" == rk3588 || "$1" == rk3576 ]]; then
+    soc="$1"
+    shift
+  fi
+  validate_soc "${soc}"
+
+  if (($# != 0)); then
+    case "$1" in
+      --cdi) mode=cdi; shift ;;
+      --debug) mode=debug; shift ;;
+    esac
+  fi
+
+  export RKAVP_SOC="${soc}"
+  export RKAVP_IMAGE="${RKAVP_IMAGE:-ghcr.io/local/rk-avp:${soc}}"
+  export RKAVP_GRAPH_DIR="${RKAVP_GRAPH_DIR:-${repo_root}/graphs}"
+
+  if [[ "${mode}" == debug ]]; then
+    compose_args+=(-f "${repo_root}/docker/compose.debug.yaml")
+  elif [[ "${mode}" == cdi ]] || has_rkavp_cdi; then
+    compose_args+=(-f "${repo_root}/docker/compose.cdi.yaml")
+  else
+    override="$(mktemp --suffix=.rkavp-devices.yaml)"
+    trap "rm -f '${override}'" EXIT
+    generate_device_override "${override}"
+    compose_args+=(-f "${override}")
+  fi
+
+  (($# != 0)) || set -- doctor
+  docker compose "${compose_args[@]}" run --rm rkavp "$@"
+}
+
+validate_deployment() {
+  local override
+  RKAVP_SOC=rk3588 RKAVP_IMAGE=rkavp:test RKAVP_GRAPH_DIR="${repo_root}/graphs" \
+    docker compose -f "${compose_file}" config --quiet
+  RKAVP_SOC=rk3588 RKAVP_IMAGE=rkavp:test RKAVP_GRAPH_DIR="${repo_root}/graphs" \
+    docker compose -f "${compose_file}" -f "${repo_root}/docker/compose.cdi.yaml" config --quiet
+  RKAVP_SOC=rk3588 RKAVP_IMAGE=rkavp:test RKAVP_GRAPH_DIR="${repo_root}/graphs" \
+    docker compose -f "${compose_file}" -f "${repo_root}/docker/compose.debug.yaml" config --quiet
+
+  override="$(mktemp --suffix=.rkavp-devices.yaml)"
+  trap "rm -f '${override}'" EXIT
+  generate_device_override "${override}"
+  RKAVP_SOC=rk3576 RKAVP_IMAGE=rkavp:test RKAVP_GRAPH_DIR="${repo_root}/graphs" \
+    docker compose -f "${compose_file}" -f "${override}" config --quiet
+}
+
+command="${1:-help}"
+shift || true
+case "${command}" in
+  build) build_image "$@" ;;
+  run) run_image "$@" ;;
+  validate) validate_deployment ;;
+  help|-h|--help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac

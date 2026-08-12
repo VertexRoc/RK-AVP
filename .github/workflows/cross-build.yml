@@ -1,0 +1,25 @@
+name: Cross Build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  aarch64-core:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        soc: [rk3588, rk3576]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross compiler
+        run: sudo apt-get update && sudo apt-get install -y cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+      - name: Configure framework and Rockchip plugin
+        run: cmake -S . -B build/${{ matrix.soc }} -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DRKAVP_TARGET_SOC=${{ matrix.soc }} -DRKAVP_ENABLE_ROCKCHIP=ON -DRKAVP_BUILD_TESTS=OFF -DRKAVP_FETCH_DEPS=ON
+      - name: Build
+        run: cmake --build build/${{ matrix.soc }} --parallel
+      - name: Install SDK and framework
+        run: |
+          cmake --install build/${{ matrix.soc }} --prefix install/${{ matrix.soc }} --component Runtime
+          cmake --install build/${{ matrix.soc }} --prefix install/${{ matrix.soc }} --component Development
+          cmake --install build/${{ matrix.soc }} --prefix install/${{ matrix.soc }} --component Testing

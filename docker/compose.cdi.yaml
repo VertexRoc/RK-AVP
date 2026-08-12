@@ -1,0 +1,9 @@
+services:
+  rkavp:
+    devices:
+      - rockchip.com/camera=all
+      - rockchip.com/rga=all
+      - rockchip.com/mpp=all
+      - rockchip.com/rknpu=all
+      - rockchip.com/audio=all
+      - rockchip.com/drm=all

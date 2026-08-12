@@ -1,0 +1,6 @@
+interface:
+  display_name: "RK-AVP Architect"
+  short_description: "Build efficient Rockchip multimedia pipelines"
+  default_prompt: "Use $rk-avp-architect to build or modify a C++17 YAML-driven RK-AVP pipeline with bounded queues, timestamped packets, explicit DMA-BUF ownership, and MPP/RGA/RKNN acceleration."
+policy:
+  allow_implicit_invocation: true

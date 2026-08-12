@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)
+
+include("${CMAKE_CURRENT_LIST_DIR}/RKAVPTargets.cmake")
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/RKAVPTestingTargets.cmake")
+  include("${CMAKE_CURRENT_LIST_DIR}/RKAVPTestingTargets.cmake")
+endif()
+check_required_components(RKAVP)

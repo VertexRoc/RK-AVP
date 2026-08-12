@@ -1,0 +1,11 @@
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  -performance-no-automatic-move,
+  portability-*,
+  modernize-use-override
+WarningsAsErrors: '*'
+HeaderFilterRegex: '^(include|src)/rkavp/.*'
+FormatStyle: file

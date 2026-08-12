@@ -1,0 +1,11 @@
+version: 1
+framework: 0.4.0
+plugin_abi: 2
+soc:
+  - rk3588
+  - rk3576
+dependencies:
+  mpp: 8f922ed34d240d71788613a327b7c2da8d35134f
+  librga: 2b32edcb97b601b25683e2941d888c8515da6d55
+  rknn_toolkit2: 42aa1d426c0a9e0869b6374edba009f7208a1926
+  zlmediakit: 0e9e59bf4382335bce22b2214877803f3beeeeca
