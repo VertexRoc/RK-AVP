@@ -56,8 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build libyaml-cpp-dev libgtest-dev
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build libyaml-cpp-dev libgtest-dev
       - name: Configure TSan
+        env:
+          CC: clang
+          CXX: clang++
         run: cmake -S . -B build/tsan -DCMAKE_BUILD_TYPE=Debug -DRKAVP_BUILD_TESTS=ON -DRKAVP_FETCH_DEPS=OFF -DRKAVP_ENABLE_THREAD_SANITIZER=ON
       - name: Build and test
         run: cmake --build build/tsan --parallel && ctest --test-dir build/tsan --output-on-failure
